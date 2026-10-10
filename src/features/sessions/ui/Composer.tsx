@@ -2371,6 +2371,7 @@ export function Composer({
                 {!compact && harness !== "fx" ? (
                   <AccessPicker
                     value={runtimeMode}
+                    harness={harness}
                     busy={busy}
                     onChange={onRuntimeModeChange}
                     onClose={() => ref.current?.focus()}

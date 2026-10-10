@@ -434,6 +434,20 @@ export const RUNTIME_MODE_HINT: Record<RuntimeMode, string> = {
     "Allow commands, edits, and supported MCP confirmations in non-plan turns without prompts.",
 };
 
+/**
+ * Auto proxies OpenCode's own auto-accept rather than an AI reviewer, so
+ * the hint says so for OpenCode sessions.
+ */
+export function runtimeModeHint(
+  mode: RuntimeMode,
+  harness?: HarnessId,
+): string {
+  if (mode === "auto" && harness === "opencode") {
+    return "Uses OpenCode auto-accept: approves requests your OpenCode config doesn't deny.";
+  }
+  return RUNTIME_MODE_HINT[mode];
+}
+
 export type WorkspaceMode = "current" | "worktree";
 
 export type Session = {

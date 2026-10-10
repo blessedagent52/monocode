@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- OpenCode sessions in **Auto** no longer ask before every tool call. Auto now proxies OpenCode's own auto-accept (the same as `opencode --auto` and the TUI's auto accept): Monocode stops overriding OpenCode's permission rules and accepts every request they still ask about, so only what your OpenCode config denies is blocked. The access picker says so for OpenCode sessions. Supervised and Auto-accept edits stop asking before look-only tools such as grep, glob, list, and task-list updates.
+
 ## [0.12.0] - 2026-10-10
 
 ### Added

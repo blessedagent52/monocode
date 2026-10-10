@@ -9,6 +9,7 @@ import {
 } from "./opencodeCatalog";
 import {
   assertSupportedOpenCodeVersion,
+  autoAcceptsOpenCodePermissions,
   buildOpenCodePermissionRules,
   compareSemver,
   sameDirectory,
@@ -176,6 +177,31 @@ describe("buildOpenCodePermissionRules", () => {
       pattern: "*",
       action: "ask",
     });
+  });
+
+  it("leaves Auto to OpenCode's own rules and auto-accept", () => {
+    expect(buildOpenCodePermissionRules("auto")).toEqual([]);
+    expect(autoAcceptsOpenCodePermissions("auto")).toBe(true);
+    expect(autoAcceptsOpenCodePermissions("full-access")).toBe(true);
+    expect(autoAcceptsOpenCodePermissions("auto-accept-edits")).toBe(false);
+    expect(autoAcceptsOpenCodePermissions("supervised")).toBe(false);
+  });
+
+  it("keeps the .env read guard and allows look-only tools in asking modes", () => {
+    for (const mode of ["supervised", "auto-accept-edits"] as const) {
+      const rules = buildOpenCodePermissionRules(mode);
+      expect(rules).toContainEqual({ permission: "grep", pattern: "*", action: "allow" });
+      const envRule = rules.findLast(
+        (rule) => rule.permission === "read" && (rule.pattern === "*" || rule.pattern === "*.env"),
+      );
+      expect(envRule).toEqual({ permission: "read", pattern: "*.env", action: "ask" });
+    }
+  });
+
+  it("still asks before commands and edits in supervised", () => {
+    const rules = buildOpenCodePermissionRules("supervised");
+    expect(rules[0]).toEqual({ permission: "*", pattern: "*", action: "ask" });
+    expect(rules.some((rule) => ["edit", "bash", "shell"].includes(rule.permission))).toBe(false);
   });
 
   it("maps allow/deny onto OpenCode reply values", () => {
