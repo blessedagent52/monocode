@@ -9,6 +9,7 @@ import {
 } from "./opencodeCatalog";
 import {
   assertSupportedOpenCodeVersion,
+  autoAcceptsOpenCodePermissions,
   buildOpenCodePermissionRules,
   compareSemver,
   sameDirectory,
@@ -178,19 +179,16 @@ describe("buildOpenCodePermissionRules", () => {
     });
   });
 
-  it("lets Auto run tools without a catch-all ask", () => {
-    const rules = buildOpenCodePermissionRules("auto");
-    expect(rules.some((rule) => rule.permission === "*")).toBe(false);
-    for (const permission of ["edit", "bash", "shell", "glob", "grep", "list", "todowrite", "task", "webfetch"]) {
-      expect(rules).toContainEqual({ permission, pattern: "*", action: "allow" });
-    }
-    // Left to OpenCode's agent defaults, which keep their own safety prompts.
-    expect(rules.some((rule) => rule.permission === "external_directory")).toBe(false);
-    expect(rules.some((rule) => rule.permission === "doom_loop")).toBe(false);
+  it("leaves Auto to OpenCode's own rules and auto-accept", () => {
+    expect(buildOpenCodePermissionRules("auto")).toEqual([]);
+    expect(autoAcceptsOpenCodePermissions("auto")).toBe(true);
+    expect(autoAcceptsOpenCodePermissions("full-access")).toBe(true);
+    expect(autoAcceptsOpenCodePermissions("auto-accept-edits")).toBe(false);
+    expect(autoAcceptsOpenCodePermissions("supervised")).toBe(false);
   });
 
-  it("keeps the .env read guard and allows look-only tools in every asking mode", () => {
-    for (const mode of ["supervised", "auto-accept-edits", "auto"] as const) {
+  it("keeps the .env read guard and allows look-only tools in asking modes", () => {
+    for (const mode of ["supervised", "auto-accept-edits"] as const) {
       const rules = buildOpenCodePermissionRules(mode);
       expect(rules).toContainEqual({ permission: "grep", pattern: "*", action: "allow" });
       const envRule = rules.findLast(

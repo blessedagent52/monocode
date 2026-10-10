@@ -27,6 +27,7 @@ import {
   appendOpenCodeAssistantTextDelta,
   asRecord,
   assertSupportedOpenCodeVersion,
+  autoAcceptsOpenCodePermissions,
   buildOpenCodePermissionRules,
   contextUsedFromMessageInfo,
   turnMetricsFromMessageInfo,
@@ -966,7 +967,9 @@ async function handleEvent(
         );
         break;
       }
-      if (live.runtimeMode === "full-access") {
+      // Auto mirrors OpenCode's auto-accept: whatever its rules still ask
+      // about is accepted once; rules that deny never reach this point.
+      if (autoAcceptsOpenCodePermissions(live.runtimeMode)) {
         await live.client.replyPermission(id, "once");
         break;
       }

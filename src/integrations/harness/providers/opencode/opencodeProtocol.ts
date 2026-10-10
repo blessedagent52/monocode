@@ -224,21 +224,6 @@ const OPENCODE_READ_ONLY_PERMISSIONS = [
   "question",
 ];
 
-/**
- * Tools Auto runs without asking. v1 names shells `bash` and subagents by
- * `task`; v2 renames them `shell` and `subagent`, so both spellings are kept.
- */
-const OPENCODE_AUTO_PERMISSIONS = [
-  "edit",
-  "bash",
-  "shell",
-  "task",
-  "subagent",
-  "skill",
-  "webfetch",
-  "websearch",
-];
-
 /** Mirrors OpenCode's own default `.env` guard, which a session `read` rule would override. */
 function readRules(): OpenCodePermissionRule[] {
   return [
@@ -251,9 +236,10 @@ function readRules(): OpenCodePermissionRule[] {
 
 /**
  * Session rules are evaluated after the agent's and the last match wins.
- * Supervised modes start from a catch-all `ask`. Auto has no catch-all, so
- * whatever it does not name (external directories, doom-loop guard, MCP
- * tools) keeps OpenCode's own agent defaults instead of prompting every time.
+ * Auto proxies OpenCode's own auto-accept (`opencode --auto`, the TUI's
+ * "auto accept"): no session rules, so the agent and the user's OpenCode
+ * config decide what is denied, and the client accepts every request that
+ * still asks. Supervised modes start from a catch-all `ask`.
  */
 export function buildOpenCodePermissionRules(
   runtimeMode: RuntimeMode,
@@ -261,24 +247,26 @@ export function buildOpenCodePermissionRules(
   if (runtimeMode === "full-access") {
     return [{ permission: "*", pattern: "*", action: "allow" }];
   }
+  if (runtimeMode === "auto") return [];
   const allow = (permission: string): OpenCodePermissionRule => ({
     permission,
     pattern: "*",
     action: "allow",
   });
-  const lookRules = [
+  const rules: OpenCodePermissionRule[] = [
+    { permission: "*", pattern: "*", action: "ask" },
     ...OPENCODE_READ_ONLY_PERMISSIONS.map(allow),
     ...readRules(),
   ];
-  if (runtimeMode === "auto") {
-    return [...lookRules, ...OPENCODE_AUTO_PERMISSIONS.map(allow)];
-  }
-  const rules: OpenCodePermissionRule[] = [
-    { permission: "*", pattern: "*", action: "ask" },
-    ...lookRules,
-  ];
   if (runtimeMode === "auto-accept-edits") rules.push(allow("edit"));
   return rules;
+}
+
+/** Modes where Monocode answers OpenCode permission requests itself. */
+export function autoAcceptsOpenCodePermissions(
+  runtimeMode: RuntimeMode,
+): boolean {
+  return runtimeMode === "auto" || runtimeMode === "full-access";
 }
 
 export function toOpenCodeV2PermissionRules(

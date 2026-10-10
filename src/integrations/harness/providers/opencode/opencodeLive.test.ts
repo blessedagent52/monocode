@@ -1120,6 +1120,66 @@ describe("OpenCode edit recovery", () => {
   });
 });
 describe("OpenCode access modes", () => {
+  it("clears session rules and auto-accepts prompts in Auto, like OpenCode's auto-accept", async () => {
+    const events: HarnessEvent[] = [];
+    const first = turn(events);
+    await waitFor(
+      () =>
+        harnessHttp.mock.calls.some(([input]) =>
+          input.url.includes("/prompt_async"),
+        ),
+      "first prompt",
+    );
+    idle();
+    await first;
+
+    const second = turn(events, { runtimeMode: "auto" });
+    await waitFor(
+      () =>
+        harnessHttp.mock.calls.some(
+          ([input]) =>
+            input.method === "PATCH" &&
+            new URL(input.url).pathname === "/session/session_1",
+        ),
+      "permission update",
+    );
+    expect(harnessHttp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ permission: [] }),
+      }),
+    );
+    await waitFor(
+      () =>
+        harnessHttp.mock.calls.filter(([input]) =>
+          input.url.includes("/prompt_async"),
+        ).length === 2,
+      "second prompt",
+    );
+
+    askPermission("session_1", "permission_auto");
+    await waitFor(
+      () =>
+        harnessHttp.mock.calls.some(
+          ([input]) =>
+            new URL(input.url).pathname === "/permission/permission_auto/reply",
+        ),
+      "automatic auto-accept reply",
+    );
+    expect(harnessHttp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ reply: "once" }),
+      }),
+    );
+    expect(
+      events.some((event) => event.type === "approval.requested"),
+    ).toBe(false);
+
+    idle();
+    await second;
+  });
+
   it("updates a live session when access changes and auto-allows residual full-access prompts", async () => {
     const events: HarnessEvent[] = [];
     const first = turn(events);
