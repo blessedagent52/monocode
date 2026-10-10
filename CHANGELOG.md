@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- OpenCode sessions in **Auto** no longer ask before every tool call. Auto now runs shell commands, edits, searches, task lists, subagents, skills, and web fetches without prompting, while OpenCode's own guards for files outside the workspace, `.env` reads, and repeated-call loops still ask. Supervised and Auto-accept edits stop asking before look-only tools such as grep, glob, list, and task-list updates.
+
 ## [0.12.0] - 2026-10-10
 
 ### Added

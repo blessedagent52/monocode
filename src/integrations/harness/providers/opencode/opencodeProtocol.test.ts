@@ -178,6 +178,34 @@ describe("buildOpenCodePermissionRules", () => {
     });
   });
 
+  it("lets Auto run tools without a catch-all ask", () => {
+    const rules = buildOpenCodePermissionRules("auto");
+    expect(rules.some((rule) => rule.permission === "*")).toBe(false);
+    for (const permission of ["edit", "bash", "shell", "glob", "grep", "list", "todowrite", "task", "webfetch"]) {
+      expect(rules).toContainEqual({ permission, pattern: "*", action: "allow" });
+    }
+    // Left to OpenCode's agent defaults, which keep their own safety prompts.
+    expect(rules.some((rule) => rule.permission === "external_directory")).toBe(false);
+    expect(rules.some((rule) => rule.permission === "doom_loop")).toBe(false);
+  });
+
+  it("keeps the .env read guard and allows look-only tools in every asking mode", () => {
+    for (const mode of ["supervised", "auto-accept-edits", "auto"] as const) {
+      const rules = buildOpenCodePermissionRules(mode);
+      expect(rules).toContainEqual({ permission: "grep", pattern: "*", action: "allow" });
+      const envRule = rules.findLast(
+        (rule) => rule.permission === "read" && (rule.pattern === "*" || rule.pattern === "*.env"),
+      );
+      expect(envRule).toEqual({ permission: "read", pattern: "*.env", action: "ask" });
+    }
+  });
+
+  it("still asks before commands and edits in supervised", () => {
+    const rules = buildOpenCodePermissionRules("supervised");
+    expect(rules[0]).toEqual({ permission: "*", pattern: "*", action: "ask" });
+    expect(rules.some((rule) => ["edit", "bash", "shell"].includes(rule.permission))).toBe(false);
+  });
+
   it("maps allow/deny onto OpenCode reply values", () => {
     expect(toOpenCodePermissionReply("allow")).toBe("once");
     expect(toOpenCodePermissionReply("deny")).toBe("reject");
