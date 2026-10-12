@@ -338,6 +338,64 @@ describe("model picker", () => {
     expect(container.querySelectorAll('[role="option"]')).toHaveLength(2);
   });
 
+  it("offers a typed provider/model the OpenCode catalog does not list", () => {
+    setHarnessModels("opencode", [
+      {
+        id: "opencode:openai/gpt-5.6-luna",
+        harness: "opencode",
+        name: "GPT-5.6 Luna",
+        nativeId: "openai/gpt-5.6-luna",
+        provider: { id: "openai", name: "OpenAI" },
+      },
+    ]);
+    const onChange = vi.fn();
+    act(() =>
+      root.render(
+        createElement(ModelPicker, {
+          harness: "opencode",
+          model: "opencode:openai/gpt-5.6-luna",
+          values: {},
+          onChange,
+          onSettingsChange: vi.fn(),
+        }),
+      ),
+    );
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')!
+        .click(),
+    );
+    hover(
+      [...container.querySelectorAll<HTMLButtonElement>("button")].find(
+        (button) => button.textContent?.startsWith("Model"),
+      )!,
+    );
+    const search = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Search models"]',
+    )!;
+
+    inputText(search, "openai/gpt-5.6-luna");
+    expect(
+      container.querySelector('[role="group"][aria-label="Custom model"]'),
+    ).toBeNull();
+
+    inputText(search, "qwen3");
+    expect(container.textContent).toContain(
+      "Type provider/model to use one OpenCode doesn't list.",
+    );
+
+    inputText(search, "openrouter/qwen/qwen3-coder");
+    const custom = container.querySelector<HTMLButtonElement>(
+      '[role="group"][aria-label="Custom model"] [role="option"]',
+    )!;
+    expect(custom.textContent).toBe("Use openrouter/qwen/qwen3-coder");
+    act(() => custom.click());
+    expect(onChange).toHaveBeenCalledWith(
+      "opencode",
+      "opencode:openrouter/qwen/qwen3-coder",
+    );
+  });
+
   it("names the source of same-name favorites from different providers", () => {
     setHarnessModels("cursor", [
       {

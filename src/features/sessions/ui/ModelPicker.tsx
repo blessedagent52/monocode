@@ -20,6 +20,7 @@ import {
 } from "react";
 import {
   coerceModelPickerTab,
+  customOpenCodeModel,
   getModelSnapshot,
   getPickerVisibilitySnapshot,
   isEffortSettingId,
@@ -249,6 +250,9 @@ function recentMenuModels(
   return models.slice(0, 6);
 }
 
+/** Group id for the typed `provider/model` row, kept apart from real providers. */
+const CUSTOM_OPENCODE_GROUP = "__custom_model__";
+
 function modelGroups(tab: ModelPickerTab, models: AgentModel[]): ModelGroup[] {
   if (tab !== "opencode") {
     return [
@@ -393,18 +397,38 @@ export function ModelPicker({
     const pool =
       visibleTab === "favorites"
         ? favorites
-            .map((id) => source.find(id))
+            // Hand-typed OpenCode models are not in any catalog.
+            .map((id) => source.find(id) ?? customOpenCodeModel(id))
             .filter(
               (item): item is AgentModel =>
                 item != null && pickerHarnesses.includes(item.harness),
             )
         : source.modelsFor(visibleTab);
     if (!needle) return pool;
-    return pool.filter((item) =>
-      `${item.name} ${HARNESS_TITLE[item.harness]} ${item.provider?.name ?? ""} ${item.provider?.id ?? ""}`
+    const matches = pool.filter((item) =>
+      `${item.name} ${HARNESS_TITLE[item.harness]} ${item.provider?.name ?? ""} ${item.provider?.id ?? ""} ${item.nativeId ?? ""}`
         .toLowerCase()
         .includes(needle),
     );
+    // OpenCode can run models its catalog does not list: offer the typed
+    // `provider/model` as its own row unless the catalog already has it.
+    const custom =
+      visibleTab === "opencode" ? customOpenCodeModel(query) : null;
+    if (
+      custom &&
+      !pool.some(
+        (item) =>
+          (item.nativeId ?? "").toLowerCase() ===
+          custom.nativeId!.toLowerCase(),
+      )
+    ) {
+      matches.push({
+        ...custom,
+        name: `Use ${custom.nativeId}`,
+        provider: { id: CUSTOM_OPENCODE_GROUP, name: "Custom model" },
+      });
+    }
+    return matches;
   }, [source, catalogVersion, favorites, providerKey, query, visibleTab]);
 
   const dismiss = (restore: boolean) => {
@@ -1605,7 +1629,9 @@ function ModelFlyout({
                   ? harnessUnavailableHint(tab)
                   : tab === "codex" && !query.trim()
                     ? "Loading Codex models…"
-                    : "No matching models"}
+                    : tab === "opencode"
+                      ? "No matching models. Type provider/model to use one OpenCode doesn't list."
+                      : "No matching models"}
             </div>
           ) : (
             groups.map((group) => (

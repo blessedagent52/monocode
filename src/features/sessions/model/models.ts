@@ -366,6 +366,12 @@ export function resolveModel(harness: HarnessId, id?: string): AgentModel {
       (model) => (model.nativeId ?? nativeIdFrom(model.id)) === slug,
     );
     if (byNative) return byNative;
+    // A typed `provider/model` the OpenCode catalog does not list is kept
+    // as is rather than prefix-matched onto a different model.
+    if (harness === "opencode") {
+      const custom = customOpenCodeModel(slug);
+      if (custom) return custom;
+    }
     // Keep moving Claude aliases as aliases until the CLI advertises them.
     if (harness === "claude" && /^(opus|sonnet|haiku)$/.test(slug)) {
       return {
@@ -448,6 +454,27 @@ export function resolveModel(harness: HarnessId, id?: string): AgentModel {
   }
   const fallbackId = defaultModelId(harness);
   return (fallbackId ? findModel(fallbackId) : undefined) ?? available[0];
+}
+
+/**
+ * An OpenCode model typed by hand as `provider/model`, for models the CLI
+ * catalog does not list (custom providers, new releases). `null` when the
+ * text is not a provider/model pair.
+ */
+export function customOpenCodeModel(text: string): AgentModel | null {
+  const slug = text.trim().replace(/^opencode:/, "");
+  const separator = slug.indexOf("/");
+  if (separator <= 0 || separator === slug.length - 1 || /\s/.test(slug)) {
+    return null;
+  }
+  const providerId = slug.slice(0, separator);
+  return {
+    id: `opencode:${slug}`,
+    harness: "opencode",
+    name: slug.slice(separator + 1),
+    nativeId: slug,
+    provider: { id: providerId, name: providerId },
+  };
 }
 
 /** Catalog-reported context window for a model id, when known. */

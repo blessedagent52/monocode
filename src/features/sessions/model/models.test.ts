@@ -3,6 +3,7 @@ import { newSession, type HarnessId } from "./session";
 import {
   MODELS,
   coerceModelPickerTab,
+  customOpenCodeModel,
   defaultModelId,
   defaultSessionChoice,
   encodeModelLaunchId,
@@ -715,5 +716,40 @@ describe("every bundled model resolves to its own native id", () => {
       resetHarnessModelOverlays();
     }
     expect(wrong).toEqual([]);
+  });
+});
+
+describe("custom OpenCode models", () => {
+  afterEach(() => resetHarnessModelOverlays());
+
+  it("keeps a typed provider/model the catalog does not list", () => {
+    setHarnessModels("opencode", [
+      {
+        id: "opencode:anthropic/claude-sonnet-4-6",
+        harness: "opencode",
+        name: "Claude Sonnet 4.6",
+        nativeId: "anthropic/claude-sonnet-4-6",
+        provider: { id: "anthropic", name: "Anthropic" },
+      },
+    ]);
+    const model = resolveModel(
+      "opencode",
+      "opencode:anthropic/claude-sonnet-4-6-preview",
+    );
+    expect(model.id).toBe("opencode:anthropic/claude-sonnet-4-6-preview");
+    expect(model.name).toBe("claude-sonnet-4-6-preview");
+    expect(nativeModelId(model.id)).toBe("anthropic/claude-sonnet-4-6-preview");
+  });
+
+  it("only treats provider/model text as a custom model", () => {
+    expect(customOpenCodeModel("openrouter/qwen/qwen3-coder")).toMatchObject({
+      id: "opencode:openrouter/qwen/qwen3-coder",
+      nativeId: "openrouter/qwen/qwen3-coder",
+      provider: { id: "openrouter" },
+    });
+    expect(customOpenCodeModel("qwen3-coder")).toBeNull();
+    expect(customOpenCodeModel("/qwen3")).toBeNull();
+    expect(customOpenCodeModel("openrouter/")).toBeNull();
+    expect(customOpenCodeModel("open router/qwen")).toBeNull();
   });
 });
