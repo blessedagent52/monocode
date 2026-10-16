@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Remote hosts can run on **Linux without systemd**, such as containers and Firecracker microVMs. Setup starts the host as a detached background process there instead of a systemd user service, so it keeps running after SSH disconnects, and the next connect starts it again if it has stopped. Machines with systemd keep the user service and lingering.
 - The workspace tab context menu has **Close All Tabs** after Close Tabs to the Left. It closes every tab in the tab bar and resets the active one to a blank session, with the same unsaved-file and terminal confirmations as File > Close All Tabs, and it is disabled when the only tab is already blank.
+- The OpenCode model picker accepts a **custom model**: type a `provider/model` id the catalog doesn't list (for example `openrouter/qwen/qwen3-coder`) and pick **Use provider/model** under Custom model. The choice is kept as typed instead of falling back to another model, and can be favorited.
 
 ### Fixed
 
